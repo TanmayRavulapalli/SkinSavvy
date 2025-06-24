@@ -220,7 +220,7 @@ def Skin_care():
         **Have a great day ahead :)**
         """)
     
-    st.info('Credit: Created by Bharath Chandra Kollapu')
+    st.info('Credit: Created by Bharath Chandra Kollapu and Tanmay Ravulapalli')
 
 def skincare_recommendation_page():
     st.title("Get Recommendation")
@@ -368,4 +368,3 @@ def skin_care_101_page():
 
 main()
 
-# {"Bharath": {"password": "Bharath@sr7", "name": "Bharath", "email": "bharath.leo307@gmail.com", "phone_number": "7386985947", "profile_picture": null}, "bharath.leo307@gmail.com": {"password": "Bharath@sr7", "name": "Bharath", "phone_number": "07386985947", "profile_picture": null}, "bharath.kollapu7@gmail.com": {"password": "Ck@7", "name": "ck", "phone_number": "7386985947", "profile_picture": "profile_pictures/bharath.kollapu7@gmail.com_profile_picture.jpg"}, "1234@gmail.com": {"password": "123", "name": "xyz", "phone_number": "123456789", "profile_picture": null}, "jamilanister7@gmail.com": {"password": "Varun@7", "name": "Varun", "phone_number": "9398015991", "profile_picture": null}, "myneninagakalyan286@gmail.com": {"password": "M.22bce7660@123", "name": "myneni naga kalyan", "phone_number": "9182727018", "profile_picture": null}, "pravallikatapa01@gmail.com": {"password": "Pravali@787", "name": "Tapa pravallika", "phone_number": "9182359787", "profile_picture": null}}
