@@ -140,7 +140,7 @@ def main():
                 login(credentials)
                 if st.session_state.logged_in:
                     st.success("✅ Successfully Logged In!")
-                    st.experimental_rerun()
+                    st.rerun()
 
             with tab2:
                 signup(credentials)
@@ -220,7 +220,7 @@ def Skin_care():
         **Have a great day ahead :)**
         """)
     
-    st.info('Credit: Created by Bharath Chandra Kollapu and Tanmay Ravulapalli')
+    st.info('Credit: Created by Tanmay Ravulapalli and Bharath Chandra Kollapu')
 
 def skincare_recommendation_page():
     st.title("Get Recommendation")
@@ -367,4 +367,5 @@ def skin_care_101_page():
 
 
 main()
+
 
