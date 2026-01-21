@@ -10,7 +10,7 @@ import os
 # Set page configuration
 st.set_page_config(page_title="SkinSavvy", page_icon=":rose:", layout="wide")
 
-# Function to read credentials from external file
+
 def load_credentials():
     try:
         with open("credentials.json", "r") as file:
@@ -18,12 +18,10 @@ def load_credentials():
     except FileNotFoundError:
         return {}
 
-# Function to save credentials to external file
 def save_credentials(credentials):
     with open("credentials.json", "w") as file:
         json.dump(credentials, file)
 
-# Initialize session state variables
 def initialize_session_state():
     if 'logged_in' not in st.session_state:
         st.session_state.logged_in = False
@@ -32,7 +30,6 @@ def initialize_session_state():
     if 'selected_page' not in st.session_state:
         st.session_state.selected_page = "Login"
 
-# Login function
 def login(credentials):
     initialize_session_state()
     if not st.session_state.logged_in:
@@ -48,8 +45,6 @@ def login(credentials):
             else:
                 st.error("Incorrect email or password")
 
-
-# Signup function
 def signup(credentials):
     st.subheader("Sign Up")
     name = st.text_input("Name", key="signup_name")
@@ -73,9 +68,8 @@ def signup(credentials):
                 "profile_picture": save_profile_picture(uploaded_file, email) if uploaded_file else None
             }
             save_credentials(credentials)
+            st.success("Sign up successful! You can now log in.")
 
-
-# Function to save profile picture
 def save_profile_picture(uploaded_file, email):
     if not os.path.exists("profile_pictures"):
         os.makedirs("profile_pictures")
@@ -84,7 +78,6 @@ def save_profile_picture(uploaded_file, email):
         file.write(uploaded_file.read())
     return file_path
 
-# Sidebar with user info
 def profile(credentials):
     st.title("Account Info")
     st.write("Email:", st.session_state.email)
@@ -93,22 +86,42 @@ def profile(credentials):
         st.write("Name:", user_info["name"])
         st.write("Phone Number:", user_info["phone_number"])
         profile_picture_path = user_info.get("profile_picture")
-        
         if profile_picture_path and os.path.exists(profile_picture_path):
             st.image(profile_picture_path, caption="Profile Picture", width=150)  # Set a fixed width for the image
-        
         st.write("---")
-        st.write("Please click Twice to logout")
         if st.button("Log out"):
+            st.write("Please click Twice to logout")
             st.session_state.logged_in = False
             st.session_state.email = None
             st.session_state.selected_page = "Login"
 
-
-#Dataset
+# ------------------ DATASET ------------------
 skincare = pd.read_csv("export_skincare.csv", encoding='ISO-8859-1', index_col=None)
+skincare['notable_effects'] = skincare['notable_effects'].fillna("")
 
-# Main menu function
+# ML
+tfidf = TfidfVectorizer(stop_words='english')
+tfidf_matrix = tfidf.fit_transform(skincare['notable_effects'])
+
+def rank_with_ml(user_effects, filtered_df, top_n=5):
+    if filtered_df.empty:
+        return filtered_df
+    if not user_effects:
+        return filtered_df.head(top_n)
+
+    user_text = " ".join(user_effects)
+    user_vector = tfidf.transform([user_text])
+
+    indices = filtered_df.index.tolist()
+    product_vectors = tfidf_matrix[indices]
+
+    similarity_scores = cosine_similarity(user_vector, product_vectors)[0]
+
+    ranked_df = filtered_df.copy()
+    ranked_df["similarity_score"] = similarity_scores
+    return ranked_df.sort_values(by="similarity_score", ascending=False).head(top_n)
+
+# ------------------ SIDEBAR ------------------
 def streamlit_menu():
     with st.sidebar:
         selected = option_menu(
@@ -121,31 +134,24 @@ def streamlit_menu():
         )
     return selected
 
-# Main function
+# ------------------ MAIN ------------------
 def main():
     credentials = load_credentials()
     initialize_session_state()
-
     selected = streamlit_menu()
 
     if selected == "Profile":
         st.title("Profile")
-
         if not st.session_state.logged_in:
             st.info("🔐 Please log in or sign up to access your profile.")
-
             tab1, tab2 = st.tabs(["Login", "Sign Up"])
-
             with tab1:
                 login(credentials)
                 if st.session_state.logged_in:
-                    st.success("✅ Successfully Logged In!")
+                    st.success("Successfully Logged In!")
                     st.rerun()
-
             with tab2:
                 signup(credentials)
-                # After signup, user can go to login manually
-
         else:
             profile(credentials)
 
@@ -158,18 +164,14 @@ def main():
     elif selected == "Skin Care 101":
         skin_care_101_page()
 
-    # Optional sidebar hint if not logged in
     if not st.session_state.logged_in:
         st.sidebar.markdown("👤 Not Logged In")
         st.sidebar.markdown("Access your profile by logging in from the **Profile** tab.")
 
 
-
-
 def Skin_care():
     st.title("SkinSavvy")
-    st.write('---') 
-
+    st.write('---')
     st.write(
         """
         ##### **Welcome to the SkinSavvy! We're here to help you find the perfect skincare products to your skin type and concerns. Rest assured, your skincare journey is in good hands with our personalized recommendations!**
@@ -177,9 +179,9 @@ def Skin_care():
     
     # displaying a local video file
     video_file = open("skincare.mp4", "rb").read()
-    st.video(video_file, start_time=1)  # displaying the video 
+    st.video(video_file, start_time=1)  # displaying the video
     
-    st.write(' ') 
+    st.write(' ')
     st.write(' ')
     st.write(
         """
@@ -190,28 +192,20 @@ def Skin_care():
     # Brand-related information with increased text size and underlined headings
     st.markdown("<p style='font-size:22px; text-decoration: underline;'><b>The Derma Co:</b></p>", unsafe_allow_html=True)
     st.markdown("<p style='font-size:18px;'>Known for its dermatologist-formulated products that focus on solving specific skin concerns, from acne to pigmentation, with a blend of science and natural ingredients.</p>", unsafe_allow_html=True)
-
     st.markdown("<p style='font-size:22px; text-decoration: underline;'><b>Dot & Key:</b></p>", unsafe_allow_html=True)
     st.markdown("<p style='font-size:18px;'>This brand specializes in products that address skin concerns like dullness, dryness, and dark circles, with a focus on hydration and a gentle skincare routine.</p>", unsafe_allow_html=True)
-
     st.markdown("<p style='font-size:22px; text-decoration: underline;'><b>Plum:</b></p>", unsafe_allow_html=True)
     st.markdown("<p style='font-size:18px;'>A vegan, cruelty-free brand offering a variety of skincare products that cater to different skin types, emphasizing clean beauty and nourishment.</p>", unsafe_allow_html=True)
-
     st.markdown("<p style='font-size:22px; text-decoration: underline;'><b>Minimalist:</b></p>", unsafe_allow_html=True)
     st.markdown("<p style='font-size:18px;'>Offering simple, effective, and non-complicated skincare solutions, Minimalist focuses on key ingredients to target specific skin concerns without unnecessary fillers.</p>", unsafe_allow_html=True)
-
     st.markdown("<p style='font-size:22px; text-decoration: underline;'><b>The Ordinary:</b></p>", unsafe_allow_html=True)
     st.markdown("<p style='font-size:18px;'>Known for its clinically effective formulations that focus on active ingredients, The Ordinary delivers high-performance skincare that is both affordable and results-driven.</p>", unsafe_allow_html=True)
-
     st.markdown("<p style='font-size:22px; text-decoration: underline;'><b>Cetaphil:</b></p>", unsafe_allow_html=True)
     st.markdown("<p style='font-size:18px;'>A trusted, dermatologist-recommended brand for sensitive skin, Cetaphil provides gentle, non-irritating skincare solutions that focus on hydration and skin barrier repair.</p>", unsafe_allow_html=True)
-
     st.markdown("<p style='font-size:22px; text-decoration: underline;'><b>Pilgrim:</b></p>", unsafe_allow_html=True)
     st.markdown("<p style='font-size:18px;'>A clean beauty brand inspired by global ingredients, Pilgrim offers solutions based on natural, potent actives to tackle issues like pigmentation, acne, and dullness.</p>", unsafe_allow_html=True)
-
     st.markdown("<p style='font-size:22px; text-decoration: underline;'><b>Mama Earth:</b></p>", unsafe_allow_html=True)
     st.markdown("<p style='font-size:18px;'>A popular brand that focuses on eco-friendly, toxin-free products, Mama Earth offers skincare solutions for a variety of skin concerns, using natural ingredients for gentle care.</p>", unsafe_allow_html=True)
-
     st.markdown("<p style='font-size:22px; text-decoration: underline;'><b>Aqualogica:</b></p>", unsafe_allow_html=True)
     st.markdown("<p style='font-size:18px;'>Specializing in water-based hydration, Aqualogica provides products that focus on moisture balance and skin health, making it ideal for dry and dehydrated skin.</p>", unsafe_allow_html=True)
         
@@ -222,6 +216,7 @@ def Skin_care():
     
     st.info('Credit: Created by Tanmay Ravulapalli and Bharath Chandra Kollapu')
 
+# ------------------ RECOMMENDATION PAGE ------------------
 def skincare_recommendation_page():
     st.title("Get Recommendation")
     st.write(
@@ -229,9 +224,7 @@ def skincare_recommendation_page():
         ##### **To get recommendations, please enter your skin type, concerns, and desired benefits to get the right skincare product recommendations**
         """
     )
-    st.write('---')
 
-    # Predefined visible effects per product type
     visible_effects_by_type = {
         "Face Wash": [
             "Brightens Skin", "Cleanses Skin", "Controls Acne", "Hydrates Skin",
@@ -258,56 +251,45 @@ def skincare_recommendation_page():
         ]
     }
 
+
     first, last = st.columns(2)
+    category = first.selectbox("Product Category", visible_effects_by_type.keys())
+    skin_type = last.selectbox("Skin Type", ["Normal", "Dry", "Oily", "Combination", "Sensitive"])
 
-    # Product Type selection
-    category = first.selectbox(label='Product Category:', options=visible_effects_by_type.keys())
     category_df = skincare[skincare['product_type'] == category]
-
-    # Skin Type selection
-    skin_type = last.selectbox(label='Your Skin Type:', options=['Normal', 'Dry', 'Oily', 'Combination', 'Sensitive'])
     category_skin_df = category_df[category_df[skin_type] == 1]
 
-    # Dynamically show visible effects
-    visible_effects = visible_effects_by_type[category]
-    selected_effects = st.multiselect("Visible Effects:", options=visible_effects)
+    selected_effects = st.multiselect("Visible Effects", visible_effects_by_type[category])
 
-    # Final filtered results
     final_df = category_skin_df[
         category_skin_df['notable_effects'].apply(
             lambda x: any(effect in x for effect in selected_effects)
         )
     ]
 
-    # Recommendations
     if st.button("Find Recommendations"):
-        recommendations = final_df[['product_name', 'brand', 'price', 'product_link']].drop_duplicates().head(5)
+        ranked_df = rank_with_ml(selected_effects, final_df, top_n=5)
 
-        if not recommendations.empty:
-            st.write("### Recommended Products For You")
-            for _, row in recommendations.iterrows():
+        if ranked_df.empty:
+            st.warning("No products found.")
+        else:
+            for _, row in ranked_df.iterrows():
                 st.markdown(
                     f"""
-                    <span style='font-size: 18px;'>**{row['product_name']}**  <br>
-                    Brand: {row['brand']}  <br>
-                    Price: {row['price']}  <br>
-                    <a href='{row['product_link']}' target='_blank'>View Product</a>  
-                    <br>---</span>
-                    """,
-                    unsafe_allow_html=True
+                    **{row['product_name']}**  
+                    Brand: {row['brand']}  
+                    Price: {row['price']}  
+                    [View Product]({row['product_link']})
+                    ---
+                    """
                 )
-        else:
-            st.warning("No products found matching your criteria.")
 
-# Skin Care 101 page
-
+# ------------------ SKIN CARE 101 ------------------
 def skin_care_101_page():
     st.title("Skin Care 101")
-    st.write('---') 
-
+    st.write('---')
     # Intro text with increased font size
     st.markdown("<p style='font-size:20px;'>Here are tips and tricks that you can follow to maximize the use of skincare products</p>", unsafe_allow_html=True)
-
     # Facial Wash
     with st.expander(" **Facial Wash**"):
         st.markdown("<p style='font-size:22px;'><b>🌊 Facial Wash</b></p>", unsafe_allow_html=True)
@@ -315,7 +297,6 @@ def skin_care_101_page():
         st.markdown("<p style='font-size:18px;'>- Wash your face a maximum of 2 times a day, in the morning and at night before bed. Washing your face too often will strip away the skin's natural oils...</p>", unsafe_allow_html=True)
         st.markdown("<p style='font-size:18px;'>- Avoid scrubbing your face harshly as it can remove the skin's natural protective barrier...</p>", unsafe_allow_html=True)
         st.markdown("<p style='font-size:18px;'>- The best way to clean your skin is to use your fingertips for 30-60 seconds with circular and massaging motions...</p>", unsafe_allow_html=True)
-
     # Toner
     with st.expander(" **Toner**"):
         st.markdown("<p style='font-size:22px;'><b>💧 Toner</b></p>", unsafe_allow_html=True)
@@ -323,7 +304,6 @@ def skin_care_101_page():
         st.markdown("<p style='font-size:18px;'>- Pour the toner onto a cotton pad and gently wipe your face. For better results...</p>", unsafe_allow_html=True)
         st.markdown("<p style='font-size:18px;'>- Use toner after washing your face...</p>", unsafe_allow_html=True)
         st.markdown("<p style='font-size:18px;'>- For those with sensitive skin, avoid skincare products that contain fragrance as much as possible...</p>", unsafe_allow_html=True)
-
     # Serum
     with st.expander(" **Serum**"):
         st.markdown("<p style='font-size:22px;'><b>💧 Serum</b></p>", unsafe_allow_html=True)
@@ -332,7 +312,6 @@ def skin_care_101_page():
         st.markdown("<p style='font-size:18px;'>- Apply serum in the morning and at night before bed...</p>", unsafe_allow_html=True)
         st.markdown("<p style='font-size:18px;'>- Choose a serum that suits your needs, such as removing acne scars, dark spots, anti-aging, or other benefits...</p>", unsafe_allow_html=True)
         st.markdown("<p style='font-size:18px;'>- To apply serum for better absorption, pour it into the palm of your hand, gently pat it onto your face...</p>", unsafe_allow_html=True)
-
     # Moisturizer
     with st.expander(" **Moisturizer**"):
         st.markdown("<p style='font-size:22px;'><b>🧴 Moisturizer</b></p>", unsafe_allow_html=True)
@@ -340,7 +319,6 @@ def skin_care_101_page():
         st.markdown("<p style='font-size:18px;'>- Moisturizer is essential as it locks in moisture and various nutrients from the serum...</p>", unsafe_allow_html=True)
         st.markdown("<p style='font-size:18px;'>- For better results, use different moisturizers in the morning and at night...</p>", unsafe_allow_html=True)
         st.markdown("<p style='font-size:18px;'>- Allow a gap of 2-3 minutes between applying serum and moisturizer...</p>", unsafe_allow_html=True)
-
     # Sunscreen
     with st.expander(" **Sunscreen**"):
         st.markdown("<p style='font-size:22px;'><b>☀️ Sunscreen</b></p>", unsafe_allow_html=True)
@@ -349,23 +327,18 @@ def skin_care_101_page():
         st.markdown("<p style='font-size:18px;'>- Apply sunscreen approximately along the length of your index and middle fingers...</p>", unsafe_allow_html=True)
         st.markdown("<p style='font-size:18px;'>- Reapply sunscreen every 2-3 hours or as needed...</p>", unsafe_allow_html=True)
         st.markdown("<p style='font-size:18px;'>- Continue to use sunscreen even indoors...</p>", unsafe_allow_html=True)
-
     # Don't Switch Skincare Products Frequently
     with st.expander(" **Don't Switch Skincare Products Frequently**"):
         st.markdown("<p style='font-size:22px;'><b>🚫 Don't Switch Skincare Products Frequently</b></p>", unsafe_allow_html=True)
         st.markdown("<p style='font-size:18px;'>Frequently switching skincare products can cause facial skin to become stressed as it has to adapt to the ingredients...</p>", unsafe_allow_html=True)
-
     # Be Consistent
     with st.expander(" **Be Consistent**"):
         st.markdown("<p style='font-size:22px;'><b>🔄 Be Consistent</b></p>", unsafe_allow_html=True)
         st.markdown("<p style='font-size:18px;'>The key to skincare is consistency. Be diligent and persistent in using skincare products because the results are not instant...</p>", unsafe_allow_html=True)
-
     # Your Face is an Asset
     with st.expander(" **Your Face is an Asset**"):
         st.markdown("<p style='font-size:22px;'><b>💖 Your Face is an Asset</b></p>", unsafe_allow_html=True)
         st.markdown("<p style='font-size:18px;'>The diverse appearances of people are a gift from the Creator. Take good care of that gift as an expression of gratitude...</p>", unsafe_allow_html=True)
 
-
+# ------------------ RUN ------------------
 main()
-
-
